@@ -16,7 +16,7 @@ std::string b64_encode(std::span<const unsigned char> source)
     return b64;
 }
 
-std::vector<unsigned char> b64_decode(const std::string& b64)
+std::vector<unsigned char> b64_decode(std::string_view b64)
 {
     std::vector<unsigned char> result(3 * b64.size() / 4);
     if (EVP_DecodeBlock(
@@ -29,7 +29,7 @@ std::vector<unsigned char> b64_decode(const std::string& b64)
     return result;
 }
 
-std::string url_encode(const std::string& source)
+std::string url_encode(std::string_view source)
 {
     std::string url;
     for (const auto& c : source)
@@ -54,6 +54,51 @@ std::string url_encode(const std::string& source)
             digit_2 += digit_2 <= 9 ? '0' : 'a' - 10;
             url += digit_1;
             url += digit_2;
+        }
+    }
+    return url;
+}
+
+int char_decode(char c)
+{
+    return c <= '9' ? c - '0' : c < 'a' ? c - ('A' - 10) : c - ('a' - 10);
+}
+
+std::string url_decode(std::string_view source)
+{
+    std::string url;
+    int hex_count = -1;
+    unsigned char hex;
+    for (const auto& c : source)
+    {
+        if (hex_count < 0)
+        {
+            if (c != '%')
+            {
+                if (c != '+')
+                {
+                    url += c;
+                }
+                else
+                {
+                    url += ' ';
+                }
+            }
+            else
+            {
+                hex_count = 0;
+            }
+        }
+        else if (hex_count == 0)
+        {
+            hex = 16 * char_decode(c);
+            ++hex_count;
+        }
+        else
+        {
+            hex += char_decode(c);
+            url += hex;
+            hex_count = -1;
         }
     }
     return url;
